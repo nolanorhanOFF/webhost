@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatApp</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon"> <!-- Favicon -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        header {
+            background-color: #7289da;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header img {
+            width: 50px;
+            vertical-align: middle;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #2f3136;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+        }
+
+        .servers-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .servers-list li {
+            padding: 10px;
+            background-color: #202225;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            padding: 20px;
+        }
+
+        .chat-header {
+            background-color: #7289da;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header .server-name {
+            font-weight: bold;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background-color: #f1f1f1;
+        }
+
+        .message .username {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        #chat-input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .user-list {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        .user-list li {
+            padding: 5px;
+            background-color: #2f3136;
+            color: white;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+
+        .btn {
+            background-color: #7289da;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background-color: #5a6fbf;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <img src="images/logo.png" alt="Logo"> <!-- Logo -->
+    <h1>ChatApp</h1>
+</header>
+
+<div class="content">
+    <div class="sidebar">
+        <h2>Serveurs</h2>
+        <ul class="servers-list" id="servers-list">
+            <!-- Liste des serveurs -->
+        </ul>
+        <button class="btn" id="create-server-btn">Créer un serveur</button>
+        <ul class="user-list" id="user-list-ul">
+            <!-- Liste des utilisateurs -->
+        </ul>
+    </div>
+
+    <div class="chat-area">
+        <div class="chat-header">
+            <span class="server-name" id="server-name">Aucun serveur sélectionné</span>
+            <button class="btn" id="delete-server-btn">Supprimer le serveur</button>
+        </div>
+        <div id="chat-messages">
+            <!-- Messages du chat -->
+        </div>
+        <textarea id="chat-input" placeholder="Entrez votre message ici..."></textarea>
+        <button class="btn" id="send-message-btn">Envoyer</button>
+    </div>
+</div>
+
+<script>
+    let currentUser = localStorage.getItem('currentUser');
+    let currentServer = null;
+
+    // Demander à l'utilisateur de se connecter
+    function login() {
+        if (!currentUser) {
+            currentUser = prompt("Entrez votre nom d'utilisateur:");
+            if (currentUser) {
+                localStorage.setItem('currentUser', currentUser);
+            }
+        }
+        loadServers();
+    }
+
+    // Charger les serveurs depuis localStorage
+    function loadServers() {
+        const servers = JSON.parse(localStorage.getItem('servers')) || [];
+        const serversList = document.getElementById('servers-list');
+        serversList.innerHTML = '';
+
+        servers.forEach((server) => {
+            const li = document.createElement('li');
+            li.textContent = server.name;
+            li.addEventListener('click', () => selectServer(server));
+            serversList.appendChild(li);
+        });
+    }
+
+    // Sélectionner un serveur
+    function selectServer(server) {
+        currentServer = server;
+        document.getElementById('server-name').textContent = server.name;
+        renderMessages();
+        renderUserList();
+    }
+
+    // Créer un serveur
+    document.getElementById('create-server-btn').addEventListener('click', () => {
+        const serverName = prompt("Nom du serveur:");
+        if (serverName) {
+            const servers = JSON.parse(localStorage.getItem('servers')) || [];
+            const newServer = {
+                id: Date.now().toString(),
+                name: serverName,
+                messages: [],
+                users: [currentUser]
+            };
+            servers.push(newServer);
+            localStorage.setItem('servers', JSON.stringify(servers));
+            loadServers();
+        }
+    });
+
+    // Supprimer un serveur
+    document.getElementById('delete-server-btn').addEventListener('click', deleteServer);
+
+    function deleteServer() {
+        if (!currentServer) return;
+
+        const confirmDelete = confirm("Êtes-vous sûr de vouloir supprimer ce serveur ?");
+        if (confirmDelete) {
+            const servers = JSON.parse(localStorage.getItem('servers')) || [];
+            const filteredServers = servers.filter((server) => server.id !== currentServer.id);
+            localStorage.setItem('servers', JSON.stringify(filteredServers));
+            alert("Serveur supprimé !");
+            loadServers();
+        }
+    }
+
+    // Afficher les messages
+    function renderMessages() {
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.innerHTML = '';
+
+        if (!currentServer) return;
+
+        currentServer.messages.forEach((msg) => {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.innerHTML = `<span class="username">${msg.username}:</span> ${msg.message}`;
+            chatMessages.appendChild(div);
+        });
+    }
+
+    // Rendre la liste des utilisateurs
+    function renderUserList() {
+        const userList = document.getElementById('user-list-ul');
+        userList.innerHTML = '';
+
+        if (!currentServer) return;
+
+        currentServer.users.forEach((user) => {
+            const li = document.createElement('li');
+            li.textContent = user;
+            userList.appendChild(li);
+        });
+    }
+
+    // Envoyer un message
+    document.getElementById('send-message-btn').addEventListener('click', sendMessage);
+
+    function sendMessage() {
+        if (!currentServer) return;
+
+        const input = document.getElementById('chat-input');
+        const message = input.value;
+        if (!message) return;
+
+        currentServer.messages.push({ username: currentUser, message });
+        saveCurrentServer();
+        renderMessages();
+        input.value = '';
+    }
+
+    // Sauvegarder le serveur actuel dans localStorage
+    function saveCurrentServer() {
+        const servers = JSON.parse(localStorage.getItem('servers')) || [];
+        const updatedServers = servers.map((server) =>
+            server.id === currentServer.id ? currentServer : server
+        );
+        localStorage.setItem('servers', JSON.stringify(updatedServers));
+    }
+
+    login();
+</script>
+
+</body>
+</html>
